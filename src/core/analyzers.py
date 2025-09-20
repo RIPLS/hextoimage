@@ -126,90 +126,35 @@ def find_signature_positions(hex_data: HexData, signature: FileSignature) -> Lis
     return results
 
 
-# Validate a detected file and return confidence score.
 def validate_detected_file(binary_data: bytes, start_pos: int, end_pos: Optional[int], signature: FileSignature) -> float:
+    """
+    Validate a detected file and return confidence score.
+    
+    Args:
+        binary_data (bytes): Complete binary data
+        start_pos (int): Start position of detected file
+        end_pos (Optional[int]): End position of detected file (if known)
+        signature (FileSignature): File signature information
+    
+    Returns:
+        float: Confidence score (0.0 to 1.0)
+    """
     confidence = 1.0
     
     # Check minimum size requirement
-    if end_pos is not None:
+    if end_pos is not None: 
         file_size = end_pos - start_pos
         if file_size < signature.min_size:
-            confidence *= 0.3  # Low confidence for too small files
+            confidence *= 0.3
     elif signature.min_size > 0:
-        # If we don't have end position but have min_size requirement
         remaining_data = len(binary_data) - start_pos
         if remaining_data < signature.min_size:
             confidence *= 0.5
     
-    # Additional validation for specific file types
-    if signature.file_type == 'WEBP':
-        # WEBP validation: ensure RIFF is followed by WEBP
-        if start_pos + 12 <= len(binary_data):
-            riff_header = binary_data[start_pos:start_pos + 12]
-            if len(riff_header) >= 12:
-                if riff_header[8:12] != b'WEBP':
-                    confidence *= 0.1  # Very low confidence if not WEBP after RIFF
-        else:
-            confidence *= 0.2
-    
-    elif signature.file_type == 'GIF':
-        # GIF validation: check for proper GIF header
-        if start_pos + 6 <= len(binary_data):
-            gif_header = binary_data[start_pos:start_pos + 6]
-            if gif_header not in [b'GIF87a', b'GIF89a']:
-                confidence *= 0.3  # Lower confidence for incomplete GIF header
-        else:
-            confidence *= 0.2
-    
-    elif signature.file_type == 'JPEG':
-        # JPEG validation: check for proper JPEG variants
-        if start_pos + 10 <= len(binary_data):
-            jpeg_header = binary_data[start_pos:start_pos + 10]
-            
-            # Check for different JPEG variants
-            if len(jpeg_header) >= 4:
-                fourth_byte = jpeg_header[3]
-                
-                # JPEG/JFIF: FF D8 FF E0
-                if fourth_byte == 0xE0 and start_pos + 14 <= len(binary_data):
-                    if binary_data[start_pos + 6:start_pos + 10] == b'JFIF':
-                        confidence *= 1.0  # High confidence for JFIF
-                    else:
-                        confidence *= 0.8  # Lower confidence if not JFIF after E0
-                
-                # JPEG/Exif: FF D8 FF E1
-                elif fourth_byte == 0xE1 and start_pos + 10 <= len(binary_data):
-                    if binary_data[start_pos + 10:start_pos + 14] == b'Exif':
-                        confidence *= 1.0  # High confidence for Exif
-                    else:
-                        confidence *= 0.8  # Lower confidence if not Exif after E1
-                
-                # JPEG/SPIFF: FF D8 FF E8
-                elif fourth_byte == 0xE8 and start_pos + 14 <= len(binary_data):
-                    if binary_data[start_pos + 6:start_pos + 11] == b'SPIFF':
-                        confidence *= 1.0  # High confidence for SPIFF
-                    else:
-                        confidence *= 0.7
-                
-                # Generic JPEG: FF D8 FF DB (quantization table)
-                elif fourth_byte == 0xDB:
-                    confidence *= 0.9  # Good confidence for quantization table
-                
-                # Generic JPEG: FF D8 FF C0 (start of frame)
-                elif fourth_byte == 0xC0:
-                    confidence *= 0.9  # Good confidence for start of frame
-                
-                # Other JPEG markers (C1, C2, etc.)
-                elif 0xC0 <= fourth_byte <= 0xCF:
-                    confidence *= 0.8  # Decent confidence for other SOF markers
-                
-                # Unknown fourth byte - might still be JPEG but lower confidence
-                else:
-                    confidence *= 0.6
-            else:
-                confidence *= 0.3  # Very low confidence if header too short
-        else:
-            confidence *= 0.2  # Low confidence if not enough data
+    # Use validator if available
+    if signature.validator:
+        format_confidence = signature.validator(binary_data, start_pos, end_pos)
+        confidence *= format_confidence
     
     return confidence
 

@@ -33,12 +33,7 @@ def read_file_as_hex_data(file_path: str, bytes_per_line: int = 16) -> Optional[
     
     Returns:
         HexData: Structured hex data, or None if error occurred
-    
-    Raises:
-        FileNotFoundError: If file doesn't exist
-        IsADirectoryError: If path is a directory
-        PermissionError: If file can't be read
-        IOError: For other I/O related errors
+
     """
     # Validate file exists and is readable
     if not os.path.exists(file_path):
