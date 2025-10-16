@@ -308,7 +308,7 @@ class MainWindow:
         
         # Tab 1: RESULT (Detected files + Preview)
         self.result_tab = ttk.Frame(self.notebook)
-        self.notebook.add(self.result_tab, text="RESULT")
+        self.notebook.add(self.result_tab, text="Results")
         
         # Add padding to the result tab
         result_inner = ttk.Frame(self.result_tab, padding=10)
@@ -338,7 +338,7 @@ class MainWindow:
         
         # Tab 2: HEX VIEWER (Hexadecimal content)
         self.hex_tab = ttk.Frame(self.notebook)
-        self.notebook.add(self.hex_tab, text="HEX VIEWER")
+        self.notebook.add(self.hex_tab, text="Hex Viewer")
         
         self.setup_hex_viewer(self.hex_tab)
         
