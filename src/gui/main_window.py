@@ -513,9 +513,6 @@ class MainWindow:
         self.help_button = ttk.Button(right_buttons, text="Help", command=self.show_help)
         self.help_button.pack(side=tk.RIGHT, padx=(10, 0))
         
-        self.settings_button = ttk.Button(right_buttons, text="Settings", command=self.show_settings)
-        self.settings_button.pack(side=tk.RIGHT)
-        
     def browse_file(self):
         """Open file browser dialog with macOS compatibility."""
         import platform
@@ -986,10 +983,6 @@ Press Enter after typing the path."""
         """Show error message."""
         messagebox.showerror("Error", message)
         self.update_status("Error occurred")
-        
-    def show_settings(self):
-        """Show settings dialog."""
-        messagebox.showinfo("Settings", "Settings dialog not implemented yet.")
         
     def show_help(self):
         """Show help dialog."""
