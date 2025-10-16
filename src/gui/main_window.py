@@ -146,23 +146,22 @@ class DetectedFilesWidget(ttk.Frame):
         
         # Create canvas for scrolling
         self.canvas = tk.Canvas(scroll_container, bg='white', highlightthickness=0)
-        v_scrollbar = ttk.Scrollbar(scroll_container, orient=tk.VERTICAL, command=self.canvas.yview)
+        self.v_scrollbar = ttk.Scrollbar(scroll_container, orient=tk.VERTICAL, command=self.canvas.yview)
         self.scrollable_frame = ttk.Frame(self.canvas)
         
         self.scrollable_frame.bind(
             "<Configure>",
-            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+            lambda e: self._update_scrollregion()
         )
         
         self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        self.canvas.configure(yscrollcommand=v_scrollbar.set)
+        self.canvas.configure(yscrollcommand=self.v_scrollbar.set)
         
         # Bind canvas width to scrollable frame width
         self.canvas.bind('<Configure>', self._on_canvas_configure)
         
-        # Pack canvas and scrollbar
+        # Pack canvas (scrollbar will be packed/unpacked dynamically)
         self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
         # Bind mouse wheel
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
@@ -170,11 +169,48 @@ class DetectedFilesWidget(ttk.Frame):
     def _on_canvas_configure(self, event):
         """Handle canvas resize."""
         self.canvas.itemconfig(self.canvas_window, width=event.width)
+        self._update_scrollregion()
+        
+    def _update_scrollregion(self):
+        """Update scroll region and manage scrollbar visibility."""
+        self.canvas.update_idletasks()
+        bbox = self.canvas.bbox("all")
+        
+        if bbox:
+            content_height = bbox[3] - bbox[1]
+            canvas_height = self.canvas.winfo_height()
+            
+            # Configure scrollregion
+            self.canvas.configure(scrollregion=bbox)
+            
+            # Show/hide scrollbar based on content
+            if content_height > canvas_height:
+                # Content exceeds viewport - enable scrolling
+                self.v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+            else:
+                # Content fits in viewport - hide scrollbar and reset position
+                self.v_scrollbar.pack_forget()
+                self.canvas.yview_moveto(0)  # Reset to top
+        else:
+            self.canvas.configure(scrollregion=(0, 0, 0, 0))
+            self.v_scrollbar.pack_forget()
         
     def _on_mousewheel(self, event):
-        """Handle mouse wheel scrolling."""
-        if self.canvas.winfo_containing(event.x_root, event.y_root) == self.canvas:
-            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        """Handle mouse wheel scrolling when mouse is over the file list."""
+        # Check if mouse is over the canvas or scrollable frame
+        widget_under_mouse = self.canvas.winfo_containing(event.x_root, event.y_root)
+        
+        # Allow scrolling if mouse is over the canvas or any child widget
+        if widget_under_mouse and (widget_under_mouse == self.canvas or 
+                                   str(widget_under_mouse).startswith(str(self.scrollable_frame))):
+            # Check if content height exceeds canvas height
+            bbox = self.canvas.bbox("all")
+            if bbox:
+                content_height = bbox[3] - bbox[1]
+                canvas_height = self.canvas.winfo_height()
+                # Only scroll if content is larger than viewport
+                if content_height > canvas_height:
+                    self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
             
     def _create_header(self, parent):
         """Create table header."""
@@ -256,6 +292,9 @@ class DetectedFilesWidget(ttk.Frame):
             for widget in [row_frame, file_label, type_label, size_label]:
                 widget.bind('<Enter>', on_enter)
                 widget.bind('<Leave>', on_leave)
+        
+        # Update scroll region after adding all files
+        self.canvas.after(100, self._update_scrollregion)
                 
     def _on_checkbox_toggle(self, index):
         """Handle checkbox toggle."""
@@ -281,6 +320,9 @@ class DetectedFilesWidget(ttk.Frame):
         self.check_vars.clear()
         self.detected_files = []
         self.selected_files.clear()
+        
+        # Hide scrollbar when there's no content
+        self.canvas.after(100, self._update_scrollregion)
 
 
 class MainWindow:
