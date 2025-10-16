@@ -20,7 +20,7 @@ def get_version():
     init_file = Path(__file__).parent / "src" / "__init__.py"
     
     if not init_file.exists():
-        print("❌ Error: src/__init__.py not found")
+        print("ERROR: src/__init__.py not found")
         sys.exit(1)
     
     with open(init_file, 'r') as f:
@@ -29,11 +29,11 @@ def get_version():
     # Match __version__ = "X.Y.Z"
     match = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', content)
     if not match:
-        print("❌ Error: Could not find __version__ in src/__init__.py")
+        print("ERROR: Could not find __version__ in src/__init__.py")
         sys.exit(1)
     
     version = match.group(1)
-    print(f"✅ Found version: {version}")
+    print(f"[OK] Found version: {version}")
     return version
 
 
@@ -44,36 +44,48 @@ def build_executable(version):
     output_dir = Path(__file__).parent / "dist" / f"HexToImage-{version}"
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    print(f"📁 Output directory: {output_dir}")
+    print(f"Output directory: {output_dir}")
+    
+    # Check if icon file exists
+    icon_path = Path(__file__).parent / "assets" / "icon.png"
+    if not icon_path.exists():
+        print(f"ERROR: Icon file not found at {icon_path}")
+        sys.exit(1)
+    
+    print(f"[OK] Icon file found: {icon_path}")
+    
+    # Check if spec file exists
+    spec_file = Path(__file__).parent / "hextoimage.spec"
+    if not spec_file.exists():
+        print(f"ERROR: Spec file not found at {spec_file}")
+        sys.exit(1)
+    
+    print(f"[OK] Spec file found: {spec_file}")
     
     # PyInstaller command for Windows
-    # Using --onefile for a single executable on Windows
+    # Using custom .spec file for better module inclusion
     pyinstaller_cmd = [
         "pyinstaller",
-        "--onefile",
-        "--windowed",
-        "--icon=assets/icon.png",
-        f"--name=HexToImage",
+        "--clean",  # Clean previous build
         f"--distpath={output_dir / 'bin'}",
-        f"--specpath={output_dir / 'build'}",
         f"--workpath={output_dir / 'build' / 'work'}",
-        "gui_launcher.py"
+        str(spec_file)
     ]
     
-    print(f"\n🔨 Running PyInstaller...")
+    print(f"\nRunning PyInstaller...")
     print(f"   Creating standalone executable for Windows\n")
     
     try:
         result = subprocess.run(pyinstaller_cmd, check=True, cwd=Path(__file__).parent)
-        print(f"\n✅ Build successful!")
+        print(f"\n[OK] Build successful!")
         exe_path = output_dir / 'bin' / 'HexToImage.exe'
-        print(f"📦 Executable location: {exe_path}")
+        print(f"Executable location: {exe_path}")
         return True
     except subprocess.CalledProcessError as e:
-        print(f"\n❌ Build failed with error code {e.returncode}")
+        print(f"\nERROR: Build failed with error code {e.returncode}")
         return False
     except FileNotFoundError:
-        print(f"\n❌ PyInstaller not found. Install it with: pip install pyinstaller")
+        print(f"\nERROR: PyInstaller not found. Install it with: pip install pyinstaller")
         return False
 
 
@@ -84,7 +96,7 @@ def cleanup_pyinstaller_artifacts(version):
     # Keep only the bin directory with the executable
     for item in output_dir.iterdir():
         if item.name not in ['bin']:
-            print(f"🗑️  Removing: {item}")
+            print(f"Removing: {item}")
             if item.is_dir():
                 import shutil
                 shutil.rmtree(item)
@@ -162,7 +174,7 @@ Built with Python and PyInstaller
     with open(readme_file, 'w') as f:
         f.write(readme_content)
     
-    print(f"📝 Created: {readme_file}")
+    print(f"Created: {readme_file}")
 
 
 def main():
@@ -182,19 +194,19 @@ def main():
         sys.exit(1)
     
     # Cleanup temporary files
-    print(f"\n🧹 Cleaning up temporary files...")
+    print(f"\nCleaning up temporary files...")
     cleanup_pyinstaller_artifacts(version)
     
     # Create README
-    print(f"\n📄 Creating documentation...")
+    print(f"\nCreating documentation...")
     create_readme(version, output_dir)
     
     print(f"\n" + "=" * 60)
-    print(f"✅ Build Complete!")
+    print(f"[OK] Build Complete!")
     print(f"=" * 60)
-    print(f"\n📦 Release package: {output_dir}")
-    print(f"🎯 Executable: {output_dir / 'bin' / 'HexToImage.exe'}")
-    print(f"\n✨ Ready to distribute! 🚀\n")
+    print(f"\nRelease package: {output_dir}")
+    print(f"Executable: {output_dir / 'bin' / 'HexToImage.exe'}")
+    print(f"\nReady to distribute!\n")
 
 
 if __name__ == "__main__":
