@@ -127,6 +127,8 @@ class DetectedFilesWidget(ttk.Frame):
         self.selected_files = set()  # Track selected files by index
         self.checkbuttons = []  # Store checkbutton widgets
         self.check_vars = []  # Store checkbox variables
+        self.current_highlighted_index = -1  # Track currently highlighted file
+        self.row_frames = []  # Store row frames for highlighting
         self.setup_ui()
         
     def setup_ui(self):
@@ -165,6 +167,11 @@ class DetectedFilesWidget(ttk.Frame):
         
         # Bind mouse wheel
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
+        
+        # Bind keyboard navigation
+        self.bind_all("<Up>", self._on_arrow_up)
+        self.bind_all("<Down>", self._on_arrow_down)
+        self.bind_all("<Return>", self._on_enter_key)
         
     def _on_canvas_configure(self, event):
         """Handle canvas resize."""
@@ -211,6 +218,52 @@ class DetectedFilesWidget(ttk.Frame):
                 # Only scroll if content is larger than viewport
                 if content_height > canvas_height:
                     self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+    
+    def _on_arrow_up(self, event):
+        """Handle up arrow key to navigate to previous file."""
+        if not self.detected_files:
+            return
+        
+        if self.current_highlighted_index > 0:
+            self._highlight_and_preview(self.current_highlighted_index - 1)
+        elif self.current_highlighted_index == -1 and len(self.detected_files) > 0:
+            self._highlight_and_preview(len(self.detected_files) - 1)
+    
+    def _on_arrow_down(self, event):
+        """Handle down arrow key to navigate to next file."""
+        if not self.detected_files:
+            return
+        
+        if self.current_highlighted_index < len(self.detected_files) - 1:
+            self._highlight_and_preview(self.current_highlighted_index + 1)
+        elif self.current_highlighted_index == -1 and len(self.detected_files) > 0:
+            self._highlight_and_preview(0)
+    
+    def _on_enter_key(self, event):
+        """Handle enter key to toggle checkbox of highlighted file."""
+        if self.current_highlighted_index >= 0 and self.current_highlighted_index < len(self.check_vars):
+            current_value = self.check_vars[self.current_highlighted_index].get()
+            self.check_vars[self.current_highlighted_index].set(not current_value)
+            self._on_checkbox_toggle(self.current_highlighted_index)
+    
+    def _highlight_and_preview(self, index):
+        """Highlight a file row and show its preview."""
+        if index < 0 or index >= len(self.detected_files):
+            return
+        
+        # Remove previous highlight
+        if self.current_highlighted_index >= 0 and self.current_highlighted_index < len(self.row_frames):
+            self.row_frames[self.current_highlighted_index].configure(style='TFrame')
+        
+        # Apply new highlight
+        self.current_highlighted_index = index
+        if index < len(self.row_frames):
+            row_frame = self.row_frames[index]
+            row_frame.configure(style='Highlight.TFrame')
+            
+            # Trigger preview
+            if self.preview_callback:
+                self.preview_callback(self.detected_files[index])
             
     def _create_header(self, parent):
         """Create table header."""
@@ -239,21 +292,24 @@ class DetectedFilesWidget(ttk.Frame):
             widget.destroy()
         self.checkbuttons.clear()
         self.check_vars.clear()
+        self.row_frames.clear()
             
         self.detected_files = detected_files
         self.selected_files.clear()
+        self.current_highlighted_index = -1
         
         # Add detected files with checkboxes
         for i, detected in enumerate(detected_files):
             file_name = f"File_{i+1}.{detected.signature.extension}"
             size_str = f"{detected.size:,} bytes" if detected.size else "Unknown"
             
-            # Create row frame
+            # Create row frame - use ttk.Frame
             row_frame = ttk.Frame(self.scrollable_frame)
             row_frame.pack(fill=tk.X, pady=2)
             
-            # Store the frame for later cleanup
+            # Store the frame for later cleanup and highlighting
             self.checkbuttons.append(row_frame)
+            self.row_frames.append(row_frame)
             
             # Create checkbox variable
             check_var = tk.BooleanVar(value=False)
@@ -283,13 +339,15 @@ class DetectedFilesWidget(ttk.Frame):
             # Configure column weights
             row_frame.columnconfigure(1, weight=1)
             
-            # Hover effect
-            def on_enter(e, frame=row_frame):
-                frame.configure(style='Hover.TFrame')
-            def on_leave(e, frame=row_frame):
-                frame.configure(style='TFrame')
+            # Hover effect - don't override highlight
+            def on_enter(e, frame=row_frame, idx=i):
+                if self.current_highlighted_index != idx:
+                    frame.configure(style='Hover.TFrame')
+            def on_leave(e, frame=row_frame, idx=i):
+                if self.current_highlighted_index != idx:
+                    frame.configure(style='TFrame')
                 
-            for widget in [row_frame, file_label, type_label, size_label]:
+            for widget in [row_frame, file_label, type_label, size_label, checkbox]:
                 widget.bind('<Enter>', on_enter)
                 widget.bind('<Leave>', on_leave)
         
@@ -304,9 +362,9 @@ class DetectedFilesWidget(ttk.Frame):
             self.selected_files.discard(index)
             
     def _on_file_click(self, index):
-        """Handle file name click for preview."""
-        if self.preview_callback and 0 <= index < len(self.detected_files):
-            self.preview_callback(self.detected_files[index])
+        """Handle file name click for preview and highlight."""
+        if 0 <= index < len(self.detected_files):
+            self._highlight_and_preview(index)
                     
     def get_selected_files(self):
         """Get list of selected detected files."""
@@ -318,8 +376,10 @@ class DetectedFilesWidget(ttk.Frame):
             widget.destroy()
         self.checkbuttons.clear()
         self.check_vars.clear()
+        self.row_frames.clear()
         self.detected_files = []
         self.selected_files.clear()
+        self.current_highlighted_index = -1
         
         # Hide scrollbar when there's no content
         self.canvas.after(100, self._update_scrollregion)
@@ -344,6 +404,7 @@ class MainWindow:
         self.is_analyzing = False
         self.is_exporting = False
         
+        self.setup_styles()
         self.setup_ui()
         self.setup_menu()
         
@@ -592,6 +653,11 @@ class MainWindow:
         
         self.help_button = ttk.Button(right_buttons, text="Help", command=self.show_help)
         self.help_button.pack(side=tk.RIGHT, padx=(10, 0))
+        
+    def setup_styles(self):
+        """Setup ttk styles for highlight and hover effects."""
+        ttk.Style().configure('Highlight.TFrame', background='lightblue')
+        ttk.Style().configure('Hover.TFrame', background='lightgray')
         
     def browse_file(self):
         """Open file browser dialog with macOS compatibility."""
