@@ -392,7 +392,7 @@ class MainWindow:
         self.root = tk.Tk()
         self.root.title("HexToImage - File Analysis Tool")
         self.root.geometry("900x700")
-        self.root.minsize(600, 500)
+        self.root.minsize(800, 600)
         
         # Set application icon
         self.set_app_icon()
@@ -486,9 +486,12 @@ class MainWindow:
         
     def setup_ui(self):
         """Setup the main user interface."""
-        # Main container
+        # Main container - use a frame without expand to have better control
         main_frame = ttk.Frame(self.root)
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Configure grid to control expansion
+        main_frame.grid_rowconfigure(2, weight=1)  # Content section (notebook) gets all extra space
         
         # File selection section
         self.setup_file_section(main_frame)
@@ -505,7 +508,8 @@ class MainWindow:
     def setup_file_section(self, parent):
         """Setup file selection section."""
         file_frame = ttk.LabelFrame(parent, text="File Selection", padding=10)
-        file_frame.pack(fill=tk.X, pady=(0, 10))
+        file_frame.grid(row=0, column=0, sticky=tk.EW, pady=(0, 10))
+        parent.grid_columnconfigure(0, weight=1)  # File frame expands horizontally
         
         # File path entry and browse button
         path_frame = ttk.Frame(file_frame)
@@ -531,7 +535,8 @@ class MainWindow:
         """Setup main content section with detected files and preview."""
         # Create notebook (tabbed interface) directly at parent level
         self.notebook = ttk.Notebook(parent)
-        self.notebook.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        self.notebook.grid(row=2, column=0, sticky=tk.NSEW, pady=(0, 10))
+        parent.grid_rowconfigure(2, weight=1)
         
         # Tab 1: RESULT (Detected files + Preview)
         self.result_tab = ttk.Frame(self.notebook)
@@ -612,7 +617,8 @@ class MainWindow:
     def setup_progress_section(self, parent):
         """Setup progress bar section."""
         progress_frame = ttk.Frame(parent)
-        progress_frame.pack(fill=tk.X, pady=(0, 10))
+        progress_frame.grid(row=3, column=0, sticky=tk.EW, pady=(0, 10))
+        parent.grid_columnconfigure(0, weight=1)  # Progress frame expands horizontally
         
         self.progress_var = tk.DoubleVar()
         self.progress_bar = ttk.Progressbar(
@@ -628,7 +634,8 @@ class MainWindow:
     def setup_button_section(self, parent):
         """Setup button section."""
         button_frame = ttk.Frame(parent)
-        button_frame.pack(fill=tk.X)
+        button_frame.grid(row=4, column=0, sticky=tk.EW)
+        parent.grid_columnconfigure(0, weight=1)  # Button frame expands horizontally
         
         # Left side - Analyze button
         self.analyze_button = ttk.Button(
