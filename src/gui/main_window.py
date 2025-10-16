@@ -118,253 +118,112 @@ Image is valid and ready for display.
 
 
 class DetectedFilesWidget(ttk.Frame):
-    """Widget for displaying detected files with checkboxes."""
+    """Widget for displaying detected files using Treeview."""
     
     def __init__(self, parent, preview_callback=None):
         super().__init__(parent)
         self.preview_callback = preview_callback
         self.detected_files = []
         self.selected_files = set()  # Track selected files by index
-        self.checkbuttons = []  # Store checkbutton widgets
-        self.check_vars = []  # Store checkbox variables
-        self.current_highlighted_index = -1  # Track currently highlighted file
-        self.row_frames = []  # Store row frames for highlighting
         self.setup_ui()
         
     def setup_ui(self):
-        """Setup the detected files UI with custom checkboxes."""
-        # Main container
-        container = ttk.Frame(self)
-        container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        """Setup the detected files UI using Treeview."""
+        # Create Treeview with scrollbar
+        tree_frame = ttk.Frame(self)
+        tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        self._create_header(container)
+        # Scrollbar
+        scrollbar = ttk.Scrollbar(tree_frame)
+        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        # Separator after header
-        ttk.Separator(container, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(0, 5))
-        
-        # Create a frame for the scrollable content
-        scroll_container = ttk.Frame(container)
-        scroll_container.pack(fill=tk.BOTH, expand=True)
-        
-        # Create canvas for scrolling
-        self.canvas = tk.Canvas(scroll_container, bg='white', highlightthickness=0)
-        self.v_scrollbar = ttk.Scrollbar(scroll_container, orient=tk.VERTICAL, command=self.canvas.yview)
-        self.scrollable_frame = ttk.Frame(self.canvas)
-        
-        self.scrollable_frame.bind(
-            "<Configure>",
-            lambda e: self._update_scrollregion()
+        # Treeview with columns
+        self.tree = ttk.Treeview(
+            tree_frame,
+            columns=('file', 'type', 'size'),
+            show='tree headings',
+            height=15,
+            yscrollcommand=scrollbar.set
         )
+        scrollbar.config(command=self.tree.yview)
         
-        self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
-        self.canvas.configure(yscrollcommand=self.v_scrollbar.set)
+        # Define column headings
+        self.tree.heading('#0', text='')
+        self.tree.heading('file', text='File name')
+        self.tree.heading('type', text='Type')
+        self.tree.heading('size', text='Size')
         
-        # Bind canvas width to scrollable frame width
-        self.canvas.bind('<Configure>', self._on_canvas_configure)
+        # Define column widths
+        self.tree.column('#0', width=40, anchor=tk.W, stretch=False)
+        self.tree.column('file', width=200, anchor=tk.W, stretch=True)
+        self.tree.column('type', width=60, anchor=tk.W, stretch=False)
+        self.tree.column('size', width=100, anchor=tk.W, stretch=True)
         
-        # Pack canvas (scrollbar will be packed/unpacked dynamically)
-        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        # Bind mouse wheel
-        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
-        
-        # Bind keyboard navigation
-        self.bind_all("<Up>", self._on_arrow_up)
-        self.bind_all("<Down>", self._on_arrow_down)
-        self.bind_all("<Return>", self._on_enter_key)
-        
-    def _on_canvas_configure(self, event):
-        """Handle canvas resize."""
-        self.canvas.itemconfig(self.canvas_window, width=event.width)
-        self._update_scrollregion()
-        
-    def _update_scrollregion(self):
-        """Update scroll region and manage scrollbar visibility."""
-        self.canvas.update_idletasks()
-        bbox = self.canvas.bbox("all")
-        
-        if bbox:
-            content_height = bbox[3] - bbox[1]
-            canvas_height = self.canvas.winfo_height()
-            
-            # Configure scrollregion
-            self.canvas.configure(scrollregion=bbox)
-            
-            # Show/hide scrollbar based on content
-            if content_height > canvas_height:
-                # Content exceeds viewport - enable scrolling
-                self.v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-            else:
-                # Content fits in viewport - hide scrollbar and reset position
-                self.v_scrollbar.pack_forget()
-                self.canvas.yview_moveto(0)  # Reset to top
-        else:
-            self.canvas.configure(scrollregion=(0, 0, 0, 0))
-            self.v_scrollbar.pack_forget()
-        
-    def _on_mousewheel(self, event):
-        """Handle mouse wheel scrolling when mouse is over the file list."""
-        # Check if mouse is over the canvas or scrollable frame
-        widget_under_mouse = self.canvas.winfo_containing(event.x_root, event.y_root)
-        
-        # Allow scrolling if mouse is over the canvas or any child widget
-        if widget_under_mouse and (widget_under_mouse == self.canvas or 
-                                   str(widget_under_mouse).startswith(str(self.scrollable_frame))):
-            # Check if content height exceeds canvas height
-            bbox = self.canvas.bbox("all")
-            if bbox:
-                content_height = bbox[3] - bbox[1]
-                canvas_height = self.canvas.winfo_height()
-                # Only scroll if content is larger than viewport
-                if content_height > canvas_height:
-                    self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
-    
-    def _on_arrow_up(self, event):
-        """Handle up arrow key to navigate to previous file."""
-        if not self.detected_files:
-            return
-        
-        if self.current_highlighted_index > 0:
-            self._highlight_and_preview(self.current_highlighted_index - 1)
-        elif self.current_highlighted_index == -1 and len(self.detected_files) > 0:
-            self._highlight_and_preview(len(self.detected_files) - 1)
-    
-    def _on_arrow_down(self, event):
-        """Handle down arrow key to navigate to next file."""
-        if not self.detected_files:
-            return
-        
-        if self.current_highlighted_index < len(self.detected_files) - 1:
-            self._highlight_and_preview(self.current_highlighted_index + 1)
-        elif self.current_highlighted_index == -1 and len(self.detected_files) > 0:
-            self._highlight_and_preview(0)
-    
-    def _on_enter_key(self, event):
-        """Handle enter key to toggle checkbox of highlighted file."""
-        if self.current_highlighted_index >= 0 and self.current_highlighted_index < len(self.check_vars):
-            current_value = self.check_vars[self.current_highlighted_index].get()
-            self.check_vars[self.current_highlighted_index].set(not current_value)
-            self._on_checkbox_toggle(self.current_highlighted_index)
-    
-    def _highlight_and_preview(self, index):
-        """Highlight a file row and show its preview."""
-        if index < 0 or index >= len(self.detected_files):
-            return
-        
-        # Remove previous highlight
-        if self.current_highlighted_index >= 0 and self.current_highlighted_index < len(self.row_frames):
-            self.row_frames[self.current_highlighted_index].configure(style='TFrame')
-        
-        # Apply new highlight
-        self.current_highlighted_index = index
-        if index < len(self.row_frames):
-            row_frame = self.row_frames[index]
-            row_frame.configure(style='Highlight.TFrame')
-            
-            # Trigger preview
-            if self.preview_callback:
-                self.preview_callback(self.detected_files[index])
-            
-    def _create_header(self, parent):
-        """Create table header."""
-        header_frame = ttk.Frame(parent)
-        header_frame.pack(fill=tk.X, pady=(0, 5))
-        
-        # Header style
-        header_style = {'font': ('TkDefaultFont', 9, 'bold'), 'anchor': tk.W}
-        
-        # Checkbox column (empty header)
-        ttk.Label(header_frame, text='', width=5).grid(row=0, column=0, padx=(5, 0), sticky=tk.W)
-        # File column
-        ttk.Label(header_frame, text='File', **header_style).grid(row=0, column=1, padx=10, sticky=tk.W)
-        # Type column
-        ttk.Label(header_frame, text='Type', width=15, **header_style).grid(row=0, column=2, padx=10, sticky=tk.W)
-        # Size column
-        ttk.Label(header_frame, text='Size', width=15, **header_style).grid(row=0, column=3, padx=10, sticky=tk.W)
-        
-        # Configure column weights
-        header_frame.columnconfigure(1, weight=1)
+        # Bind events
+        self.tree.bind('<<TreeviewSelect>>', self._on_selection_change)
+        self.tree.bind('<Return>', self._on_enter_key)
+        self.tree.bind('<space>', self._on_space_key)
+        self.tree.bind('<Button-1>', self._on_checkbox_click) # Bind click to checkbox column
+        self.tree.pack(fill=tk.BOTH, expand=True)
         
     def update_detected_files(self, detected_files: List[Any]):
-        """Update the list with detected files."""
+        """Update the treeview with detected files."""
         # Clear existing items
-        for widget in self.checkbuttons:
-            widget.destroy()
-        self.checkbuttons.clear()
-        self.check_vars.clear()
-        self.row_frames.clear()
-            
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+        
         self.detected_files = detected_files
         self.selected_files.clear()
-        self.current_highlighted_index = -1
         
-        # Add detected files with checkboxes
+        # Add detected files
         for i, detected in enumerate(detected_files):
             file_name = f"File_{i+1}.{detected.signature.extension}"
             size_str = f"{detected.size:,} bytes" if detected.size else "Unknown"
             
-            # Create row frame - use ttk.Frame
-            row_frame = ttk.Frame(self.scrollable_frame)
-            row_frame.pack(fill=tk.X, pady=2)
-            
-            # Store the frame for later cleanup and highlighting
-            self.checkbuttons.append(row_frame)
-            self.row_frames.append(row_frame)
-            
-            # Create checkbox variable
-            check_var = tk.BooleanVar(value=False)
-            self.check_vars.append(check_var)
-            
-            # Checkbox
-            checkbox = ttk.Checkbutton(
-                row_frame, 
-                variable=check_var,
-                command=lambda idx=i: self._on_checkbox_toggle(idx)
+            # Create item with checkbox in first column
+            checkbox = "☐"  # Unchecked box
+            self.tree.insert(
+                '',
+                tk.END,
+                iid=str(i),
+                text=checkbox,
+                values=(file_name, detected.file_type, size_str)
             )
-            checkbox.grid(row=0, column=0, padx=(5, 0), sticky=tk.W)
-            
-            # File name (clickable for preview)
-            file_label = ttk.Label(row_frame, text=file_name, cursor='hand2')
-            file_label.grid(row=0, column=1, padx=10, sticky=tk.W)
-            file_label.bind('<Button-1>', lambda e, idx=i: self._on_file_click(idx))
-            
-            # Type
-            type_label = ttk.Label(row_frame, text=detected.file_type, width=15)
-            type_label.grid(row=0, column=2, padx=10, sticky=tk.W)
-            
-            # Size
-            size_label = ttk.Label(row_frame, text=size_str, width=15)
-            size_label.grid(row=0, column=3, padx=10, sticky=tk.W)
-            
-            # Configure column weights
-            row_frame.columnconfigure(1, weight=1)
-            
-            # Hover effect - don't override highlight
-            def on_enter(e, frame=row_frame, idx=i):
-                if self.current_highlighted_index != idx:
-                    frame.configure(style='Hover.TFrame')
-            def on_leave(e, frame=row_frame, idx=i):
-                if self.current_highlighted_index != idx:
-                    frame.configure(style='TFrame')
-                
-            for widget in [row_frame, file_label, type_label, size_label, checkbox]:
-                widget.bind('<Enter>', on_enter)
-                widget.bind('<Leave>', on_leave)
         
-        # Update scroll region after adding all files
-        self.canvas.after(100, self._update_scrollregion)
-                
-    def _on_checkbox_toggle(self, index):
-        """Handle checkbox toggle."""
-        if self.check_vars[index].get():
-            self.selected_files.add(index)
-        else:
+    def _on_selection_change(self, event):
+        """Handle selection change in treeview."""
+        selection = self.tree.selection()
+        if selection:
+            index = int(selection[0])
+            if 0 <= index < len(self.detected_files):
+                # Trigger preview
+                if self.preview_callback:
+                    self.preview_callback(self.detected_files[index])
+    
+    def _on_enter_key(self, event):
+        """Handle Enter key to toggle checkbox."""
+        selection = self.tree.selection()
+        if selection:
+            index = int(selection[0])
+            self._toggle_checkbox(index)
+    
+    def _on_space_key(self, event):
+        """Handle Space key to toggle checkbox."""
+        selection = self.tree.selection()
+        if selection:
+            index = int(selection[0])
+            self._toggle_checkbox(index)
+    
+    def _toggle_checkbox(self, index):
+        """Toggle checkbox state for a file."""
+        if index in self.selected_files:
             self.selected_files.discard(index)
-            
-    def _on_file_click(self, index):
-        """Handle file name click for preview and highlight."""
-        if 0 <= index < len(self.detected_files):
-            self._highlight_and_preview(index)
+            # Update item text to unchecked
+            self.tree.item(str(index), text="☐")
+        else:
+            self.selected_files.add(index)
+            # Update item text to checked
+            self.tree.item(str(index), text="☑")
                     
     def get_selected_files(self):
         """Get list of selected detected files."""
@@ -372,17 +231,25 @@ class DetectedFilesWidget(ttk.Frame):
         
     def clear_files(self):
         """Clear all detected files."""
-        for widget in self.checkbuttons:
-            widget.destroy()
-        self.checkbuttons.clear()
-        self.check_vars.clear()
-        self.row_frames.clear()
+        for item in self.tree.get_children():
+            self.tree.delete(item)
         self.detected_files = []
         self.selected_files.clear()
-        self.current_highlighted_index = -1
+
+    def _on_checkbox_click(self, event):
+        """Handle click on the checkbox column to toggle selection."""
+        # Get the item that was clicked
+        item = self.tree.identify_row(event.y)
+        # Get the column that was clicked
+        column = self.tree.identify_column(event.x)
         
-        # Hide scrollbar when there's no content
-        self.canvas.after(100, self._update_scrollregion)
+        # Only toggle if clicking on the checkbox column (#0)
+        if item and column == '#0':
+            try:
+                index = int(item)
+                self._toggle_checkbox(index)
+            except (ValueError, IndexError):
+                pass
 
 
 class MainWindow:
