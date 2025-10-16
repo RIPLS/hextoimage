@@ -35,9 +35,6 @@ venv.bak/
 *~
 .DS_Store
 
-# PyInstaller
-*.manifest
-
 # Test and coverage
 .pytest_cache/
 .coverage
