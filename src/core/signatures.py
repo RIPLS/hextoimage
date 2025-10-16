@@ -1,4 +1,5 @@
 from typing import Dict, Optional, Callable
+from dataclasses import dataclass
 from .validators import (
     validate_jpeg_format,
     validate_webp_format,
@@ -7,6 +8,7 @@ from .validators import (
     validate_tiff_format
 )
 
+@dataclass
 class FileSignature:
     """
     Represents a file type signature with start/end patterns.

@@ -12,7 +12,7 @@ from .signatures import FileSignature, SIGNATURE_REGISTRY
 
 # Represents a detected file within the binary data.
 @dataclass
-class DetectedFile(NamedTuple):
+class DetectedFile:
     file_type: str
     start_offset: int
     end_offset: Optional[int]
@@ -24,6 +24,7 @@ class DetectedFile(NamedTuple):
 class AnalysisResult:
     source_file: str
     source_file_size: int
+    total_size: int 
     detected_files: List[DetectedFile]
     analysis_summary: Dict[str, int]  # file_type -> count
 
@@ -222,6 +223,7 @@ def analyze_file_content(hex_data: HexData, target_types: Optional[List[str]] = 
     return AnalysisResult(
         source_file=hex_data.file_path,
         source_file_size=hex_data.file_size,
+        total_size=hex_data.file_size,
         detected_files=detected_files,
         analysis_summary=summary
     )

@@ -1,13 +1,21 @@
 # HexToImage
 
-A Python tool to read files and display their content as hexadecimal data, with plans for future image visualization capabilities.
+A Python tool designed to analyze files of any type by examining their hexadecimal content to detect and extract embedded images. Its main purpose is to help recover images from backup or data dump files. When images are found, they are listed, and the user can preview them directly within the tool.
 
 ## Features
 
-- Read any file format and convert to hexadecimal representation
-- Clean, organized output with offset, hex values, and ASCII representation
-- Modular architecture supporting both CLI and future GUI interfaces
-- Built with Python 3.7+ using only standard library
+- **Universal File Support**: 
+  - Analyze ANY file type without restrictions
+  - Binary data files and unknown formats
+
+- **Analysis**:
+  - Detect embedded files by their signatures (JPEG, PNG, GIF, WEBP, TIFF)
+  - File entropy and pattern analysis
+  - Enhanced hex viewer with structure analysis
+
+- **Command Line Interface**: For batch processing and automation
+- **Modular Architecture**: Clean separation of core/cli/gui components
+- **Built with Python 3.7+**: Standard library + optional Pillow for image previews
 
 ## Project Structure
 
@@ -24,22 +32,46 @@ hextoimage/
 ```
 
 ## Usage
+
+### Graphical Interface (Recommended)
 ```bash
+# Launch the GUI
+python3 gui_launcher.py
+
+# Or directly
+python3 src/gui/main_window.py
+```
+
+### Command Line Interface
+```bash
+# Basic hex output
 python3 src/cli/main.py <file_path>
+
+# Analyze for embedded files
+python3 src/cli/main.py <file_path> --analyze
+
+# Extract detected files
+python3 src/cli/main.py <file_path> --extract
+
+# Show hex summary
+python3 src/cli/main.py <file_path> --summary
 ```
 
 ## Development Status
 
 - ✅ Basic hex reading functionality
-- 🔄 Currently refactoring to modular architecture
-- ⏳ CLI interface (in progress)
-- ⏳ GUI interface (planned)
-- ⏳ Image visualization features (planned)
+- ✅ Modular architecture with core/cli/gui separation
+- ✅ CLI interface with analysis and extraction features
+- ✅ Modern GUI interface with file preview
+- ✅ File signature detection for common formats
+- ⏳ Additional file format support (planned)
+- ⏳ Advanced image visualization features (planned)
 
 ## Requirements
 
 - Python 3.7 or higher
-- No external dependencies (uses standard library only)
+- Standard library (tkinter for GUI)
+- **Pillow (REQUIRED for image preview)** - `pip install Pillow`
 
 ## Installation
 
@@ -47,6 +79,16 @@ Clone the repository:
 ```bash
 git clone <your-repo-url>
 cd hextoimage
+```
+
+Install required dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+Test the installation:
+```bash
+python3 test_gui.py
 ```
 
 ## Contributing

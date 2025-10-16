@@ -1,0 +1,11 @@
+# HexToImage Requirements
+# Core dependencies for the GUI application
+
+# PIL for image preview functionality (REQUIRED for image preview)
+Pillow>=9.0.0
+
+# Optional: Enhanced drag and drop support (especially useful on macOS)
+# tkinterdnd2>=0.3.0
+
+# No other external dependencies required
+# The application uses Python's standard library (tkinter) for the GUI
