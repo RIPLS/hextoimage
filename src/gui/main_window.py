@@ -195,7 +195,7 @@ class DetectedFilesWidget(ttk.Frame):
         self.detected_files = []
 
 
-class MainWindow:
+class MainWindow:s
     """Main application window."""
     
     def __init__(self):
@@ -203,6 +203,9 @@ class MainWindow:
         self.root.title("HexToImage - File Analysis Tool")
         self.root.geometry("900x700")
         self.root.minsize(600, 500)
+        
+        # Set application icon
+        self.set_app_icon()
         
         # Application state
         self.current_file_path = tk.StringVar()
@@ -212,6 +215,26 @@ class MainWindow:
         
         self.setup_ui()
         self.setup_menu()
+        
+    def set_app_icon(self):
+        """Set the application icon."""
+        try:
+            # Get the icon path relative to this file
+            icon_path = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icon.png')
+            icon_path = os.path.abspath(icon_path)
+            
+            if os.path.exists(icon_path):
+                # For macOS and Linux
+                if sys.platform == 'darwin' or sys.platform.startswith('linux'):
+                    icon_img = tk.PhotoImage(file=icon_path)
+                    self.root.iconphoto(True, icon_img)
+                # For Windows
+                elif sys.platform == 'win32':
+                    self.root.iconbitmap(icon_path)
+            else:
+                print(f"Icon file not found: {icon_path}")
+        except Exception as e:
+            print(f"Could not set application icon: {e}")
         
     def setup_menu(self):
         """Setup the application menu."""
@@ -279,11 +302,20 @@ class MainWindow:
         
     def setup_content_section(self, parent):
         """Setup main content section with detected files and preview."""
-        content_frame = ttk.LabelFrame(parent, text="Analysis Results", padding=10)
-        content_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        # Create notebook (tabbed interface) directly at parent level
+        self.notebook = ttk.Notebook(parent)
+        self.notebook.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
+        
+        # Tab 1: RESULT (Detected files + Preview)
+        self.result_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.result_tab, text="RESULT")
+        
+        # Add padding to the result tab
+        result_inner = ttk.Frame(self.result_tab, padding=10)
+        result_inner.pack(fill=tk.BOTH, expand=True)
         
         # Create paned window for resizable sections
-        paned = ttk.PanedWindow(content_frame, orient=tk.HORIZONTAL)
+        paned = ttk.PanedWindow(result_inner, orient=tk.HORIZONTAL)
         paned.pack(fill=tk.BOTH, expand=True)
         
         # Left panel - Detected files
@@ -304,6 +336,52 @@ class MainWindow:
         self.preview_widget = FilePreviewWidget(right_frame)
         self.preview_widget.pack(fill=tk.BOTH, expand=True)
         
+        # Tab 2: HEX VIEWER (Hexadecimal content)
+        self.hex_tab = ttk.Frame(self.notebook)
+        self.notebook.add(self.hex_tab, text="HEX VIEWER")
+        
+        self.setup_hex_viewer(self.hex_tab)
+        
+    def setup_hex_viewer(self, parent):
+        """Setup the hexadecimal viewer interface."""
+        # Create frame for hex viewer
+        hex_frame = ttk.Frame(parent, padding=5)
+        hex_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Info label
+        ttk.Label(hex_frame, text="Hexadecimal Content:", font=('TkDefaultFont', 10, 'bold')).pack(anchor=tk.W, pady=(0, 5))
+        
+        # Hex text display with scrollbars
+        text_frame = ttk.Frame(hex_frame)
+        text_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Scrollbars
+        v_scrollbar = ttk.Scrollbar(text_frame)
+        v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        h_scrollbar = ttk.Scrollbar(text_frame, orient=tk.HORIZONTAL)
+        h_scrollbar.pack(side=tk.BOTTOM, fill=tk.X)
+        
+        # Text widget with monospace font
+        self.hex_text = tk.Text(
+            text_frame,
+            wrap=tk.NONE,
+            font=('Courier', 10),
+            yscrollcommand=v_scrollbar.set,
+            xscrollcommand=h_scrollbar.set,
+            bg='#f0f0f0',
+            fg='#000000',
+            padx=5,
+            pady=5
+        )
+        self.hex_text.pack(fill=tk.BOTH, expand=True)
+        
+        v_scrollbar.config(command=self.hex_text.yview)
+        h_scrollbar.config(command=self.hex_text.xview)
+        
+        # Make text read-only
+        self.hex_text.config(state=tk.DISABLED)
+        
     def setup_progress_section(self, parent):
         """Setup progress bar section."""
         progress_frame = ttk.Frame(parent)
@@ -315,7 +393,7 @@ class MainWindow:
             variable=self.progress_var, 
             mode='determinate'
         )
-        self.progress_bar.pack(fill=tk.X, pady=(0, 5))
+        self.progress_bar.pack(fill=tk.BOTH, expand=True)
         
         self.status_label = ttk.Label(progress_frame, text="Ready")
         self.status_label.pack(anchor=tk.W)
@@ -329,8 +407,7 @@ class MainWindow:
         self.analyze_button = ttk.Button(
             button_frame, 
             text="Analyze", 
-            command=self.analyze_file,
-            style='Accent.TButton'
+            command=self.analyze_file
         )
         self.analyze_button.pack(side=tk.LEFT)
         
@@ -485,6 +562,12 @@ Press Enter after typing the path."""
         self.analysis_result = None
         self.update_status("Ready")
         
+        # Clear hex viewer
+        if hasattr(self, 'hex_text'):
+            self.hex_text.configure(state=tk.NORMAL)
+            self.hex_text.delete(1.0, tk.END)
+            self.hex_text.configure(state=tk.DISABLED)
+        
     def analyze_file(self):
         """Analyze the selected file."""
         if not self.current_file_path.get():
@@ -543,6 +626,9 @@ Press Enter after typing the path."""
             status = f"No embedded files detected - File size: {self.analysis_result.total_size:,} bytes"
             
         self.update_status(status)
+        
+        # Update hex viewer with file content
+        self.update_hex_viewer()
         
     def _show_file_info(self):
         """Show basic file information when no embedded files are detected."""
@@ -678,7 +764,25 @@ Press Enter after typing the path."""
             error_details = f"Preview error: {str(e)}\n\nDetails:\n{traceback.format_exc()}"
             self.preview_widget.show_error(error_details)
             
-            
+    def update_hex_viewer(self):
+        """Update the hexadecimal viewer with the current hex_data."""
+        if not self.hex_data:
+            self.hex_text.configure(state=tk.DISABLED)
+            self.hex_text.delete(1.0, tk.END)
+            return
+
+        # Clear existing content
+        self.hex_text.configure(state=tk.NORMAL)
+        self.hex_text.delete(1.0, tk.END)
+
+        # Format and insert hex data
+        formatted_hex = format_hex_data(self.hex_data)
+        self.hex_text.insert(tk.END, formatted_hex)
+
+        # Scroll to the beginning
+        self.hex_text.see(tk.END)
+        self.hex_text.configure(state=tk.DISABLED)
+
     def update_progress(self, value: float, status: str):
         """Update progress bar and status."""
         self.progress_var.set(value)

@@ -97,4 +97,4 @@ This is a personal learning project, but suggestions and improvements are welcom
 
 ## License
 
-MIT License (or your preferred license)
+MIT License
