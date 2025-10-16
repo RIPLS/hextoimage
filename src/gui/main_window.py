@@ -305,20 +305,55 @@ class MainWindow:
     def set_app_icon(self):
         """Set the application icon."""
         try:
-            # Get the icon path relative to this file
-            icon_path = os.path.join(os.path.dirname(__file__), '..', '..', 'assets', 'icon.png')
-            icon_path = os.path.abspath(icon_path)
+            # Get the base assets path
+            assets_dir = os.path.join(os.path.dirname(__file__), '..', '..', 'assets')
+            assets_dir = os.path.abspath(assets_dir)
             
-            if os.path.exists(icon_path):
-                # For macOS and Linux
-                if sys.platform == 'darwin' or sys.platform.startswith('linux'):
-                    icon_img = tk.PhotoImage(file=icon_path)
+            # For Windows - try to use .ico first, then convert .png if needed
+            if sys.platform == 'win32':
+                # Try .ico file first
+                ico_path = os.path.join(assets_dir, 'icon.ico')
+                png_path = os.path.join(assets_dir, 'icon.png')
+                
+                if os.path.exists(ico_path):
+                    try:
+                        self.root.iconbitmap(ico_path)
+                    except Exception as ico_error:
+                        print(f"Could not set .ico icon: {ico_error}")
+                        # Fallback to PNG with iconphoto
+                        if os.path.exists(png_path):
+                            try:
+                                icon_img = tk.PhotoImage(file=png_path)
+                                self.root.iconphoto(True, icon_img)
+                            except Exception as png_error:
+                                print(f"Could not set .png icon: {png_error}")
+                elif os.path.exists(png_path):
+                    # Use PNG with iconphoto (works in Windows 10+)
+                    try:
+                        icon_img = tk.PhotoImage(file=png_path)
+                        self.root.iconphoto(True, icon_img)
+                        
+                        # For Windows taskbar icon, we need to set the appid
+                        try:
+                            import ctypes
+                            myappid = 'hextoimage.fileanalyzer.1.0.0'
+                            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+                        except Exception as appid_error:
+                            print(f"Could not set Windows AppUserModelID: {appid_error}")
+                    except Exception as png_error:
+                        print(f"Could not set .png icon: {png_error}")
+                else:
+                    print(f"Icon files not found in: {assets_dir}")
+                    
+            # For macOS and Linux
+            elif sys.platform == 'darwin' or sys.platform.startswith('linux'):
+                png_path = os.path.join(assets_dir, 'icon.png')
+                if os.path.exists(png_path):
+                    icon_img = tk.PhotoImage(file=png_path)
                     self.root.iconphoto(True, icon_img)
-                # For Windows
-                elif sys.platform == 'win32':
-                    self.root.iconbitmap(icon_path)
-            else:
-                print(f"Icon file not found: {icon_path}")
+                else:
+                    print(f"Icon file not found: {png_path}")
+                    
         except Exception as e:
             print(f"Could not set application icon: {e}")
         
