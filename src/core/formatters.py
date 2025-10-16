@@ -4,7 +4,7 @@ This module handles all formatting and display logic for hex data.
 """
 
 from typing import Dict, Any
-from .hex_reader import HexData, HexLine
+from src.core.hex_reader import HexData, HexLine
 
 
 def format_hex_line(hex_line: HexLine, bytes_per_line: int = 16) -> str:

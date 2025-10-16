@@ -7,8 +7,8 @@ within binary data based on their signatures (magic numbers).
 import os
 from dataclasses import dataclass
 from typing import List, Dict, Optional, Tuple, NamedTuple
-from .hex_reader import HexData
-from .signatures import FileSignature, SIGNATURE_REGISTRY
+from src.core.hex_reader import HexData
+from src.core.signatures import FileSignature, SIGNATURE_REGISTRY
 
 # Represents a detected file within the binary data.
 @dataclass

@@ -1,6 +1,6 @@
 from typing import Dict, Optional, Callable
 from dataclasses import dataclass
-from .validators import (
+from src.core.validators import (
     validate_jpeg_format,
     validate_webp_format,
     validate_gif_format,

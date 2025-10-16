@@ -26,10 +26,10 @@ except ImportError:
 # Add the src directory to the path so we can import our modules
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
-from core.hex_reader import read_file_as_hex_data, get_hex_summary
-from core.analyzers import analyze_file_content, get_supported_file_types
-from core.exporters import extract_detected_files, create_extraction_report
-from core.formatters import format_hex_data, format_hex_summary
+from src.core.hex_reader import read_file_as_hex_data, get_hex_summary
+from src.core.analyzers import analyze_file_content, get_supported_file_types
+from src.core.exporters import extract_detected_files, create_extraction_report
+from src.core.formatters import format_hex_data, format_hex_summary
 
 
 class FilePreviewWidget(ttk.Frame):
@@ -195,7 +195,7 @@ class DetectedFilesWidget(ttk.Frame):
         self.detected_files = []
 
 
-class MainWindow:s
+class MainWindow:
     """Main application window."""
     
     def __init__(self):

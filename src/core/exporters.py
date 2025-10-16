@@ -7,8 +7,8 @@ import os
 import shutil
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
-from .hex_reader import HexData
-from .analyzers import AnalysisResult, DetectedFile, reconstruct_binary_data
+from src.core.hex_reader import HexData
+from src.core.analyzers import AnalysisResult, DetectedFile, reconstruct_binary_data
 
 
 @dataclass

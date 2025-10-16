@@ -12,6 +12,6 @@ __version__ = "1.0.0"
 __author__ = "Luis Suarez"
 
 # Main API exports
-from .core.hex_reader import read_file_as_hex_data, get_hex_summary
-from .core.analyzers import analyze_file_content, get_supported_file_types
-from .core.exporters import extract_detected_files
+from src.core.hex_reader import read_file_as_hex_data, get_hex_summary
+from src.core.analyzers import analyze_file_content, get_supported_file_types
+from src.core.exporters import extract_detected_files
