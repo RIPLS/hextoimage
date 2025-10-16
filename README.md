@@ -23,6 +23,7 @@ A Python tool designed to analyze files of any type by examining their hexadecim
 hextoimage/
 ├── README.md
 ├── requirements.txt
+├── build.py                # Script to build executables
 ├── src/
 │   ├── core/           # Core hex reading logic
 │   ├── cli/            # Command line interface
@@ -57,6 +58,40 @@ python3 src/cli/main.py <file_path> --extract
 python3 src/cli/main.py <file_path> --summary
 ```
 
+### Running the Executable
+
+- **Windows**: Double-click `HexToImage.exe` or run from command line
+
+### Distribution
+
+The entire `HexToImage-{VERSION}` folder can be distributed to users. They don't need Python or any dependencies installed - it's fully portable!
+
+## Building Executables
+
+You can create a standalone Windows executable that doesn't require Python to be installed on the target machine.
+
+### Quick Start Commands
+
+**Windows (Command Prompt or PowerShell):**
+```bash
+build.bat
+```
+
+**Manual (any platform):**
+```bash
+python3 build.py
+```
+
+### Prerequisites
+
+1. Install build dependencies:
+```bash
+pip install -r requirements.txt
+# or specifically: pip install PyInstaller
+```
+
+2. Ensure you have `assets/icon.png` (used for the application icon)
+
 ## Development Status
 
 - ✅ Basic hex reading functionality
@@ -69,9 +104,10 @@ python3 src/cli/main.py <file_path> --summary
 
 ## Requirements
 
-- Python 3.7 or higher
+- Python 3.7 or higher (for development)
 - Standard library (tkinter for GUI)
 - **Pillow (REQUIRED for image preview)** - `pip install Pillow`
+- **PyInstaller (for building executables)** - `pip install PyInstaller`
 
 ## Installation
 
@@ -88,7 +124,7 @@ pip install -r requirements.txt
 
 Test the installation:
 ```bash
-python3 test_gui.py
+python3 gui_launcher.py
 ```
 
 ## Contributing
