@@ -135,9 +135,18 @@ class DetectedFilesWidget(ttk.Frame):
         container = ttk.Frame(self)
         container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
+        self._create_header(container)
+        
+        # Separator after header
+        ttk.Separator(container, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(0, 5))
+        
+        # Create a frame for the scrollable content
+        scroll_container = ttk.Frame(container)
+        scroll_container.pack(fill=tk.BOTH, expand=True)
+        
         # Create canvas for scrolling
-        self.canvas = tk.Canvas(container, bg='white', highlightthickness=0)
-        v_scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=self.canvas.yview)
+        self.canvas = tk.Canvas(scroll_container, bg='white', highlightthickness=0)
+        v_scrollbar = ttk.Scrollbar(scroll_container, orient=tk.VERTICAL, command=self.canvas.yview)
         self.scrollable_frame = ttk.Frame(self.canvas)
         
         self.scrollable_frame.bind(
@@ -158,9 +167,6 @@ class DetectedFilesWidget(ttk.Frame):
         # Bind mouse wheel
         self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
         
-        # Create header
-        self._create_header()
-        
     def _on_canvas_configure(self, event):
         """Handle canvas resize."""
         self.canvas.itemconfig(self.canvas_window, width=event.width)
@@ -170,9 +176,9 @@ class DetectedFilesWidget(ttk.Frame):
         if self.canvas.winfo_containing(event.x_root, event.y_root) == self.canvas:
             self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
             
-    def _create_header(self):
+    def _create_header(self, parent):
         """Create table header."""
-        header_frame = ttk.Frame(self.scrollable_frame)
+        header_frame = ttk.Frame(parent)
         header_frame.pack(fill=tk.X, pady=(0, 5))
         
         # Header style
@@ -200,9 +206,6 @@ class DetectedFilesWidget(ttk.Frame):
             
         self.detected_files = detected_files
         self.selected_files.clear()
-        
-        # Separator after header
-        ttk.Separator(self.scrollable_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(0, 5))
         
         # Add detected files with checkboxes
         for i, detected in enumerate(detected_files):
