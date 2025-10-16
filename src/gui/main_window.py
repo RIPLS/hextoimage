@@ -636,30 +636,30 @@ class MainWindow:
         button_frame = ttk.Frame(parent)
         button_frame.grid(row=4, column=0, sticky=tk.EW)
         parent.grid_columnconfigure(0, weight=1)  # Button frame expands horizontally
-        
-        # Left side - Analyze button
-        self.analyze_button = ttk.Button(
-            button_frame, 
-            text="Analyze", 
-            command=self.analyze_file
-        )
-        self.analyze_button.pack(side=tk.LEFT)
-        
-        # Center - Export button
+                
+        # Left - Export button
         self.export_button = ttk.Button(
             button_frame,
             text="Export Selected",
             command=self.export_selected_files,
             state='disabled'
         )
-        self.export_button.pack(side=tk.LEFT, padx=(10, 0))
+        self.export_button.pack(side=tk.LEFT)
+
+        # Right side - Analyze button
+        self.analyze_button = ttk.Button(
+            button_frame, 
+            text="Analyze", 
+            command=self.analyze_file
+        )
+        self.analyze_button.pack(side=tk.RIGHT, padx=(10, 0))
         
         # Right side - Settings and Help buttons
         right_buttons = ttk.Frame(button_frame)
         right_buttons.pack(side=tk.RIGHT)
         
         self.help_button = ttk.Button(right_buttons, text="Help", command=self.show_help)
-        self.help_button.pack(side=tk.RIGHT, padx=(10, 0))
+        self.help_button.pack(side=tk.RIGHT)
         
     def setup_styles(self):
         """Setup ttk styles for highlight and hover effects."""
