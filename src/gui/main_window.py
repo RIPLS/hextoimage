@@ -118,81 +118,166 @@ Image is valid and ready for display.
 
 
 class DetectedFilesWidget(ttk.Frame):
-    """Widget for displaying detected files in a tree view."""
+    """Widget for displaying detected files with checkboxes."""
     
     def __init__(self, parent, preview_callback=None):
         super().__init__(parent)
         self.preview_callback = preview_callback
         self.detected_files = []
+        self.selected_files = set()  # Track selected files by index
+        self.checkbuttons = []  # Store checkbutton widgets
+        self.check_vars = []  # Store checkbox variables
         self.setup_ui()
         
     def setup_ui(self):
-        """Setup the detected files UI."""
-        # Create treeview with scrollbars
-        tree_frame = ttk.Frame(self)
-        tree_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        """Setup the detected files UI with custom checkboxes."""
+        # Main container
+        container = ttk.Frame(self)
+        container.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        # Treeview
-        columns = ('Type', 'Size')
-        self.tree = ttk.Treeview(tree_frame, columns=columns, show='tree headings', height=10)
+        # Create canvas for scrolling
+        self.canvas = tk.Canvas(container, bg='white', highlightthickness=0)
+        v_scrollbar = ttk.Scrollbar(container, orient=tk.VERTICAL, command=self.canvas.yview)
+        self.scrollable_frame = ttk.Frame(self.canvas)
         
-        # Configure columns
-        self.tree.heading('#0', text='File')
-        self.tree.heading('Type', text='Type')
-        self.tree.heading('Size', text='Size')
+        self.scrollable_frame.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
         
-        self.tree.column('#0', width=200, minwidth=150)
-        self.tree.column('Type', width=120, minwidth=100)
-        self.tree.column('Size', width=120, minwidth=100)
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_frame, anchor="nw")
+        self.canvas.configure(yscrollcommand=v_scrollbar.set)
         
-        # Scrollbars
-        v_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.VERTICAL, command=self.tree.yview)
-        h_scrollbar = ttk.Scrollbar(tree_frame, orient=tk.HORIZONTAL, command=self.tree.xview)
-        self.tree.configure(yscrollcommand=v_scrollbar.set, xscrollcommand=h_scrollbar.set)
+        # Bind canvas width to scrollable frame width
+        self.canvas.bind('<Configure>', self._on_canvas_configure)
         
-        # Pack scrollbars and treeview
-        self.tree.grid(row=0, column=0, sticky='nsew')
-        v_scrollbar.grid(row=0, column=1, sticky='ns')
-        h_scrollbar.grid(row=1, column=0, sticky='ew')
+        # Pack canvas and scrollbar
+        self.canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        v_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         
-        tree_frame.grid_rowconfigure(0, weight=1)
-        tree_frame.grid_columnconfigure(0, weight=1)
+        # Bind mouse wheel
+        self.canvas.bind_all("<MouseWheel>", self._on_mousewheel)
         
-        # Bind selection event
-        self.tree.bind('<<TreeviewSelect>>', self.on_file_select)
+        # Create header
+        self._create_header()
+        
+    def _on_canvas_configure(self, event):
+        """Handle canvas resize."""
+        self.canvas.itemconfig(self.canvas_window, width=event.width)
+        
+    def _on_mousewheel(self, event):
+        """Handle mouse wheel scrolling."""
+        if self.canvas.winfo_containing(event.x_root, event.y_root) == self.canvas:
+            self.canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            
+    def _create_header(self):
+        """Create table header."""
+        header_frame = ttk.Frame(self.scrollable_frame)
+        header_frame.pack(fill=tk.X, pady=(0, 5))
+        
+        # Header style
+        header_style = {'font': ('TkDefaultFont', 9, 'bold'), 'anchor': tk.W}
+        
+        # Checkbox column (empty header)
+        ttk.Label(header_frame, text='', width=5).grid(row=0, column=0, padx=(5, 0), sticky=tk.W)
+        # File column
+        ttk.Label(header_frame, text='File', **header_style).grid(row=0, column=1, padx=10, sticky=tk.W)
+        # Type column
+        ttk.Label(header_frame, text='Type', width=15, **header_style).grid(row=0, column=2, padx=10, sticky=tk.W)
+        # Size column
+        ttk.Label(header_frame, text='Size', width=15, **header_style).grid(row=0, column=3, padx=10, sticky=tk.W)
+        
+        # Configure column weights
+        header_frame.columnconfigure(1, weight=1)
         
     def update_detected_files(self, detected_files: List[Any]):
-        """Update the tree with detected files."""
+        """Update the list with detected files."""
         # Clear existing items
-        for item in self.tree.get_children():
-            self.tree.delete(item)
+        for widget in self.checkbuttons:
+            widget.destroy()
+        self.checkbuttons.clear()
+        self.check_vars.clear()
             
         self.detected_files = detected_files
+        self.selected_files.clear()
         
-        # Add detected files to tree
+        # Separator after header
+        ttk.Separator(self.scrollable_frame, orient=tk.HORIZONTAL).pack(fill=tk.X, pady=(0, 5))
+        
+        # Add detected files with checkboxes
         for i, detected in enumerate(detected_files):
             file_name = f"File_{i+1}.{detected.signature.extension}"
             size_str = f"{detected.size:,} bytes" if detected.size else "Unknown"
             
-            self.tree.insert('', 'end', text=file_name, values=(
-                detected.file_type,
-                size_str
-            ))
+            # Create row frame
+            row_frame = ttk.Frame(self.scrollable_frame)
+            row_frame.pack(fill=tk.X, pady=2)
             
-    def on_file_select(self, event):
-        """Handle file selection in tree."""
-        selection = self.tree.selection()
-        if selection and self.preview_callback:
-            item = selection[0]
-            index = self.tree.index(item)
-            if 0 <= index < len(self.detected_files):
-                self.preview_callback(self.detected_files[index])
+            # Store the frame for later cleanup
+            self.checkbuttons.append(row_frame)
+            
+            # Create checkbox variable
+            check_var = tk.BooleanVar(value=False)
+            self.check_vars.append(check_var)
+            
+            # Checkbox
+            checkbox = ttk.Checkbutton(
+                row_frame, 
+                variable=check_var,
+                command=lambda idx=i: self._on_checkbox_toggle(idx)
+            )
+            checkbox.grid(row=0, column=0, padx=(5, 0), sticky=tk.W)
+            
+            # File name (clickable for preview)
+            file_label = ttk.Label(row_frame, text=file_name, cursor='hand2')
+            file_label.grid(row=0, column=1, padx=10, sticky=tk.W)
+            file_label.bind('<Button-1>', lambda e, idx=i: self._on_file_click(idx))
+            
+            # Type
+            type_label = ttk.Label(row_frame, text=detected.file_type, width=15)
+            type_label.grid(row=0, column=2, padx=10, sticky=tk.W)
+            
+            # Size
+            size_label = ttk.Label(row_frame, text=size_str, width=15)
+            size_label.grid(row=0, column=3, padx=10, sticky=tk.W)
+            
+            # Configure column weights
+            row_frame.columnconfigure(1, weight=1)
+            
+            # Hover effect
+            def on_enter(e, frame=row_frame):
+                frame.configure(style='Hover.TFrame')
+            def on_leave(e, frame=row_frame):
+                frame.configure(style='TFrame')
                 
+            for widget in [row_frame, file_label, type_label, size_label]:
+                widget.bind('<Enter>', on_enter)
+                widget.bind('<Leave>', on_leave)
+                
+    def _on_checkbox_toggle(self, index):
+        """Handle checkbox toggle."""
+        if self.check_vars[index].get():
+            self.selected_files.add(index)
+        else:
+            self.selected_files.discard(index)
+            
+    def _on_file_click(self, index):
+        """Handle file name click for preview."""
+        if self.preview_callback and 0 <= index < len(self.detected_files):
+            self.preview_callback(self.detected_files[index])
+                    
+    def get_selected_files(self):
+        """Get list of selected detected files."""
+        return [self.detected_files[i] for i in sorted(self.selected_files)]
+        
     def clear_files(self):
         """Clear all detected files."""
-        for item in self.tree.get_children():
-            self.tree.delete(item)
+        for widget in self.checkbuttons:
+            widget.destroy()
+        self.checkbuttons.clear()
+        self.check_vars.clear()
         self.detected_files = []
+        self.selected_files.clear()
 
 
 class MainWindow:
@@ -212,6 +297,7 @@ class MainWindow:
         self.hex_data = None
         self.analysis_result = None
         self.is_analyzing = False
+        self.is_exporting = False
         
         self.setup_ui()
         self.setup_menu()
@@ -411,6 +497,15 @@ class MainWindow:
         )
         self.analyze_button.pack(side=tk.LEFT)
         
+        # Center - Export button
+        self.export_button = ttk.Button(
+            button_frame,
+            text="Export Selected",
+            command=self.export_selected_files,
+            state='disabled'
+        )
+        self.export_button.pack(side=tk.LEFT, padx=(10, 0))
+        
         # Right side - Settings and Help buttons
         right_buttons = ttk.Frame(button_frame)
         right_buttons.pack(side=tk.RIGHT)
@@ -562,6 +657,9 @@ Press Enter after typing the path."""
         self.analysis_result = None
         self.update_status("Ready")
         
+        # Disable export button when no results
+        self.export_button.configure(state='disabled')
+        
         # Clear hex viewer
         if hasattr(self, 'hex_text'):
             self.hex_text.configure(state=tk.NORMAL)
@@ -620,10 +718,14 @@ Press Enter after typing the path."""
         if self.analysis_result and self.analysis_result.detected_files:
             self.detected_files_widget.update_detected_files(self.analysis_result.detected_files)
             status = f"Found {len(self.analysis_result.detected_files)} embedded files"
+            # Enable export button when files are detected
+            self.export_button.configure(state='normal')
         else:
             # Even if no embedded files, show file information
             self._show_file_info()
             status = f"No embedded files detected - File size: {self.analysis_result.total_size:,} bytes"
+            # Disable export button when no files detected
+            self.export_button.configure(state='disabled')
             
         self.update_status(status)
         
@@ -662,6 +764,94 @@ Press Enter after typing the path."""
         self.is_analyzing = False
         self.analyze_button.configure(state='normal', text='Analyze')
         self.progress_var.set(0)
+        
+    def export_selected_files(self):
+        """Export selected files to user-chosen location."""
+        if self.is_exporting:
+            return
+            
+        # Get selected files
+        selected_files = self.detected_files_widget.get_selected_files()
+        if not selected_files:
+            messagebox.showwarning("No Files Selected", "Please select files to export by checking the boxes.")
+            return
+            
+        # Ask user for output directory
+        output_dir = filedialog.askdirectory(
+            title="Select Export Location",
+            initialdir="."
+        )
+        
+        if not output_dir:
+            return
+            
+        # Start export in background thread
+        self.is_exporting = True
+        self.export_button.configure(state='disabled', text='Exporting...')
+        self.analyze_button.configure(state='disabled')
+        self.browse_button.configure(state='disabled')
+        
+        thread = threading.Thread(target=self._export_files_thread, args=(selected_files, output_dir), daemon=True)
+        thread.start()
+        
+    def _export_files_thread(self, selected_files, output_dir):
+        """Background thread for file export."""
+        try:
+            self.root.after(0, lambda: self.update_progress(10, "Preparing export..."))
+            
+            # Create a temporary analysis result with only selected files
+            temp_analysis_result = type('AnalysisResult', (), {
+                'source_file': self.current_file_path.get(),
+                'detected_files': selected_files
+            })()
+            
+            self.root.after(0, lambda: self.update_progress(30, "Extracting files..."))
+            
+            # Use the existing export functionality
+            from src.core.exporters import extract_detected_files
+            
+            # Extract files
+            extraction_result = extract_detected_files(
+                self.hex_data,
+                temp_analysis_result,
+                output_dir=output_dir,
+                clean_existing=False
+            )
+            
+            self.root.after(0, lambda: self.update_progress(80, "Finalizing export..."))
+            
+            # Show completion message
+            success_msg = f"Export completed!\n\n"
+            success_msg += f"Files exported: {extraction_result.total_extracted}\n"
+            success_msg += f"Location: {extraction_result.output_directory}\n"
+            success_msg += f"Success rate: {extraction_result.success_rate:.1%}"
+            
+            if extraction_result.failed_extractions:
+                success_msg += f"\n\nFailed extractions: {len(extraction_result.failed_extractions)}"
+                
+            self.root.after(0, lambda: self._export_complete(success_msg))
+            
+        except Exception as e:
+            error_msg = f"Export failed: {str(e)}"
+            self.root.after(0, lambda: self._export_complete(error_msg, is_error=True))
+        finally:
+            self.root.after(0, self._export_cleanup)
+            
+    def _export_complete(self, message, is_error=False):
+        """Handle export completion."""
+        if is_error:
+            messagebox.showerror("Export Error", message)
+        else:
+            messagebox.showinfo("Export Complete", message)
+            
+    def _export_cleanup(self):
+        """Clean up after export completion."""
+        self.is_exporting = False
+        self.export_button.configure(state='normal', text='Export Selected')
+        self.analyze_button.configure(state='normal')
+        self.browse_button.configure(state='normal')
+        self.progress_var.set(0)
+        self.update_status("Export completed")
         
     def preview_file(self, detected_file):
         """Preview a detected file."""
