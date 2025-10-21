@@ -7,7 +7,10 @@ A Python tool designed to analyze files of any type by examining their hexadecim
 [![GitHub release](https://img.shields.io/github/v/release/RIPLS/hextoimage?sort=semver&color=blue)](https://github.com/RIPLS/hextoimage/releases/latest)
 [![Downloads](https://img.shields.io/github/downloads/RIPLS/hextoimage/total?color=brightgreen)](https://github.com/RIPLS/hextoimage/releases)
 
-👉 **[Download for Windows (.exe)](https://github.com/USER/REPO/releases/download/v1.0.0/file-v1.0.0-windows-x64.exe)**
+| Description | Preview |
+|---|---|
+| 👉 **[Download for Windows (.exe)](https://github.com/USER/REPO/releases/download/v1.0.0/file-v1.0.0-windows-x64.exe)** | <img width="269" height="218" alt="image" src="https://github.com/user-attachments/assets/9c1d0384-f937-4800-9c9b-9d87fefcfb3b" /> |
+
 
 ## Features
 
