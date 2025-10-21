@@ -2,6 +2,13 @@
 
 A Python tool designed to analyze files of any type by examining their hexadecimal content to detect and extract embedded images. Its main purpose is to help recover images from backup or data dump files. When images are found, they are listed, and the user can preview them directly within the tool.
 
+## 🚀 Download the latest version
+
+[![GitHub release](https://img.shields.io/github/v/release/RIPLS/hextoimage?sort=semver&color=blue)](https://github.com/RIPLS/hextoimage/releases/latest)
+[![Downloads](https://img.shields.io/github/downloads/RIPLS/hextoimage/total?color=brightgreen)](https://github.com/RIPLS/hextoimage/releases)
+
+👉 **[Download for Windows (.exe)](https://github.com/USER/REPO/releases/download/v1.0.0/file-v1.0.0-windows-x64.exe)**
+
 ## Features
 
 - **Universal File Support**: 
