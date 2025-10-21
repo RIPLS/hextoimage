@@ -95,10 +95,9 @@ pip install -r requirements.txt
 ## Development Status
 
 - ✅ Basic hex reading functionality
-- ✅ Modular architecture with core/cli/gui separation
-- ✅ CLI interface with analysis and extraction features
-- ✅ Modern GUI interface with file preview
 - ✅ File signature detection for common formats
+- ✅ UI with file detection and extraction 
+- ✅ CLI interface with analysis and extraction features
 - ⏳ Additional file format support (planned)
 - ⏳ Advanced image visualization features (planned)
 
